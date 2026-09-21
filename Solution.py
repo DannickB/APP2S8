@@ -1,0 +1,222 @@
+import time
+
+from convert import convert
+from reduce import reduce
+from QV_encode import QV_encode
+from QV_decode import QV_decode
+from QS_encode import QS_encode
+from QS_decode import QS_decode
+from DPCM_encode import DPCM_encode
+from DPCM_decode import DPCM_decode
+from transmit import transmit
+from computePSNR import computePSNR
+
+from PIL import Image
+import numpy as np
+import matplotlib.pyplot as plt
+
+# ==========================================================================
+#
+# S7 Codage de l'information APP2 - Solution
+#
+# La solution est divisee en 2 parties, le codage et le decodage.
+# Aucune donnee ne peut passer directement du codage au decodage,
+# i.e. sans passer par la variable Data qui simule la couche physique.
+#
+# ==========================================================================
+#
+# SELECTION DES PARAMETRES
+#
+# ==========================================================================
+# Choix de la quantification
+# 1 = Technique de quantification vectorielle (QV)
+# 2 = Technique de quantification differentielle (DPCM)
+# 3 = Technique de quantification scalaire (QS)
+# 4 = Technique de quantification par transformee en cosinus discrete (DCT)
+# 5 = Technique de quantification par troncature de blocs (BTC)
+# 6 = Technique de quantification adaptative (QA)
+Choix = 3
+# Charge l'image source
+# A FAIRE : remplacer par votre propre chargement d'image (pas de librairie utilisee ici)
+I_source = Image.open("./ressources/crest.bmp")
+
+# Affiche l'image source
+# A FAIRE : remplacer par votre propre affichage d'image
+# Debut du chronometre
+tic = time.time()
+# ==========================================================================
+#
+# CONVERSION DE FORMAT DE CODAGE DES COULEURS
+#
+# ==========================================================================
+I_source = convert(I_source)
+I_source = np.array(I_source)
+# ==========================================================================
+#
+# REDUCTION DE DIMENSIONS
+#
+# ==========================================================================
+# Dimensions desirees
+LIGNES = 256
+COLONNES = 256
+# Appelle la fonction d'interpolation
+I_reduced = reduce(I_source, LIGNES, COLONNES)
+plt.figure(1)
+plt.title('Image reduite')
+plt.imshow(I_reduced, cmap='gray')
+
+# ==========================================================================
+#
+# CODAGE
+#
+# ==========================================================================
+# ----------------------------------------------
+# CODEUR - QV
+# ----------------------------------------------
+if Choix == 1:
+    # Parametres d'entree
+    # A FAIRE : Remplacer ArgumentX par votre/vos parametre(s) d'entree
+    ArgumentX = 0
+    # Appelle la fonction de codage
+    I_encoded, I_metadata = QV_encode(I_reduced, ArgumentX)
+
+# ----------------------------------------------
+# CODEUR - DPCM
+# ----------------------------------------------
+if Choix == 2:
+    # Parametres d'entree
+    # A FAIRE : Remplacer ArgumentX par votre/vos parametre(s) d'entree
+    ArgumentX = 0
+    # Appelle la fonction de codage
+    I_encoded, I_metadata = DPCM_encode(I_reduced, ArgumentX)
+
+# ----------------------------------------------
+# CODEUR - QS
+# ----------------------------------------------
+if Choix == 3:
+    args = {"n_nits":3, "distribution":"gaussian"}
+    I_encoded, metadata = QS_encode(I_reduced, args)
+    print(np.unique(I_encoded))
+
+# ----------------------------------------------
+# CODEUR - DCT
+# ----------------------------------------------
+if Choix == 4:
+    pass  # A FAIRE : Au choix.
+
+# ----------------------------------------------
+# CODEUR - BTC
+# ----------------------------------------------
+if Choix == 5:
+    pass  # A FAIRE : Au choix.
+
+# ----------------------------------------------
+# CODEUR - QA
+# ----------------------------------------------
+if Choix == 6:
+    pass  # A FAIRE : Au choix.
+
+# ==========================================================================
+#
+# INTERFACE AVEC LA COUCHE PHYSIQUE
+#
+# ==========================================================================
+# La fonction transmit envoie les donnees a transmettre sous un format
+# compris par la couche physique. Elle prend en entree un dictionnaire de
+# cellules ou la cellule N doit contenir les donnees qui seront codees sur
+# N bits.
+# Convention :
+# Les elements de la cellule N doivent etre entre 0 et 2^N-1.
+# A FAIRE : Remplir le dictionnaire de cellules Data a partir de I_encoded et
+# I_metadata en respectant la convention de la couche physique.
+# Data = {}
+# Data[8] = I_encoded
+# Data[1] = I_metadata
+# Appelle de la fonction de transmission
+# Budget = transmit(Data)
+# Si une erreur a ete detectee par la fonction d'interface
+# if Budget < 0:
+#     # Affichage de l'erreur
+#     print('Erreur : Une donnee depasse la gamme dynamique a la cellule %i.' % -Budget)
+
+# %%
+# ==========================================================================
+#
+# RECOMPOSITION
+#
+# ==========================================================================
+# A FAIRE : Recomposer I_encoded_Rx et I_metadata_Rx a partir de Data.
+# I_encoded_Rx = Data[8]
+# I_metadata_Rx = Data[1]
+# ==========================================================================
+#
+# DECODAGE
+#
+# ==========================================================================
+# ----------------------------------------------
+# DECODEUR - QV
+# ----------------------------------------------
+if Choix == 1:
+    # Parametres d'entree
+    # A FAIRE : Remplacer ArgumentY par votre/vos parametre(s) d'entree
+    ArgumentY = 0
+    # Appelle la fonction de decodage
+    I_decoded = QV_decode(I_encoded_Rx, I_metadata_Rx, ArgumentY)
+
+# ----------------------------------------------
+# DECODEUR - DPCM
+# ----------------------------------------------
+if Choix == 2:
+    # Parametres d'entree
+    # A FAIRE : Remplacer ArgumentY par votre/vos parametre(s) d'entree
+    ArgumentY = 0
+    # Appelle la fonction de decodage
+    I_decoded = DPCM_decode(I_encoded_Rx, I_metadata_Rx, ArgumentY)
+
+# ----------------------------------------------
+# DECODEUR - QS
+# ----------------------------------------------
+if Choix == 3:
+    I_decoded = QS_decode(I_encoded, metadata)
+
+# ----------------------------------------------
+# DECODEUR - DCT
+# ----------------------------------------------
+if Choix == 4:
+    pass  # A FAIRE : Au choix.
+
+# ----------------------------------------------
+# DECODEUR - BTC
+# ----------------------------------------------
+if Choix == 5:
+    pass  # A FAIRE : Au choix.
+
+# ----------------------------------------------
+# DECODEUR - QA
+# ----------------------------------------------
+if Choix == 6:
+    pass  # A FAIRE : Au choix.
+
+# Affiche l'image quantifiee
+# A FAIRE : remplacer par votre propre affichage d'image
+plt.figure(2)
+plt.title('Image decodée')
+plt.imshow(I_decoded, cmap='gray')
+plt.show()
+# ==========================================================================
+#
+# CALCUL DE LA PERFORMANCE
+#
+# ==========================================================================
+# Fin du chronometre
+Time = time.time() - tic
+# Si aucune erreur n'a ete detectee
+if Budget > 0:
+    # Calcul du PSNR
+    PSNR = computePSNR(I_reduced, I_decoded)
+    # Calcul du debit
+    Rate = Budget / (len(I_decoded) * len(I_decoded[0]))
+    # Affichage des performances
+    print('********* Resultats *********')
+    print('Temps ecoule: %.2f s\nPSNR: %.2f dB\nRate: %.2f bits/pixel' % (Time, PSNR, Rate))
+    print('*****************************')

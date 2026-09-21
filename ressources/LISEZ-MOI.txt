@@ -1,0 +1,12 @@
+Exécutez Solution.m dans MATLAB pour démarrer le codec.
+
+Les mentions "À FAIRE" en commentaire indiquent les endroits où vous devez 
+insérer votre code.
+
+La solution est divisée en 2 parties, le codage et le décodage. Ces deux
+sections sont délimitées par le symbole %% et peuvent être démarrées 
+séparément à l'aide de la commande ctrl+enter. Aucune donnée ne peut
+passer directement du codage au décodage, i.e. sans passer par la variable
+Data qui simule la couche physique.
+
+Bonne programmation!
