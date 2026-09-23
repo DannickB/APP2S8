@@ -5,8 +5,8 @@ from reduce import reduce
 from QV_encode import QV_encode
 from QV_decode import QV_decode
 from QS import QS_encode, QS_decode
-from DPCM_encode import DPCM_encode
-from DPCM_decode import DPCM_decode
+from DPCM import DPCM_encode, DPCM_decode
+import DctQuantifier as dct
 from transmit import transmit
 from computePSNR import computePSNR
 
@@ -34,10 +34,11 @@ import matplotlib.pyplot as plt
 # 4 = Technique de quantification par transformee en cosinus discrete (DCT)
 # 5 = Technique de quantification par troncature de blocs (BTC)
 # 6 = Technique de quantification adaptative (QA)
-Choix = 3
+Choix = 2
 # Charge l'image source
 # A FAIRE : remplacer par votre propre chargement d'image (pas de librairie utilisee ici)
-I_source = Image.open("./ressources/crest.bmp")
+nom = 'lenna'
+I_source = Image.open(f"./ressources/{nom}.bmp")
 
 # Affiche l'image source
 # A FAIRE : remplacer par votre propre affichage d'image
@@ -49,7 +50,6 @@ tic = time.time()
 #
 # ==========================================================================
 I_source = convert(I_source)
-I_source = np.array(I_source)
 # ==========================================================================
 #
 # REDUCTION DE DIMENSIONS
@@ -69,6 +69,7 @@ plt.imshow(I_reduced, cmap='gray')
 # CODAGE
 #
 # ==========================================================================
+args = {"n_nits":5, "distribution":"laplacian"}
 # ----------------------------------------------
 # CODEUR - QV
 # ----------------------------------------------
@@ -83,25 +84,23 @@ if Choix == 1:
 # CODEUR - DPCM
 # ----------------------------------------------
 if Choix == 2:
-    # Parametres d'entree
-    # A FAIRE : Remplacer ArgumentX par votre/vos parametre(s) d'entree
-    ArgumentX = 0
     # Appelle la fonction de codage
-    I_encoded, I_metadata = DPCM_encode(I_reduced, ArgumentX)
+    I_encoded, I_metadata = DPCM_encode(I_reduced, args)
+    print(np.unique(I_encoded))
 
 # ----------------------------------------------
 # CODEUR - QS
 # ----------------------------------------------
 if Choix == 3:
     args = {"n_nits":3, "distribution":"gaussian"}
-    I_encoded, metadata = QS_encode(I_reduced, args)
+    I_encoded, I_metadata = QS_encode(I_reduced, args)
     print(np.unique(I_encoded))
 
 # ----------------------------------------------
 # CODEUR - DCT
 # ----------------------------------------------
 if Choix == 4:
-    pass  # A FAIRE : Au choix.
+    I_encoded, a, b = dct.encode(I_reduced)
 
 # ----------------------------------------------
 # CODEUR - BTC
@@ -167,30 +166,27 @@ if Choix == 1:
 # DECODEUR - DPCM
 # ----------------------------------------------
 if Choix == 2:
-    # Parametres d'entree
-    # A FAIRE : Remplacer ArgumentY par votre/vos parametre(s) d'entree
-    ArgumentY = 0
     # Appelle la fonction de decodage
-    I_decoded = DPCM_decode(I_encoded_Rx, I_metadata_Rx, ArgumentY)
+    I_decoded = DPCM_decode(I_encoded, I_metadata)
 
 # ----------------------------------------------
 # DECODEUR - QS
 # ----------------------------------------------
 if Choix == 3:
-    I_decoded = QS_decode(I_encoded, metadata)
+    I_decoded = QS_decode(I_encoded, I_metadata)
 
 # ----------------------------------------------
 # DECODEUR - DCT
 # ----------------------------------------------
 if Choix == 4:
-    pass  # A FAIRE : Au choix.
+    l, c = I_reduced.shape
+    I_decoded = dct.decode(I_encoded,l, c, a, b)
 
 # ----------------------------------------------
 # DECODEUR - BTC
 # ----------------------------------------------
 if Choix == 5:
-    pass  # A FAIRE : Au choix.
-
+    pass
 # ----------------------------------------------
 # DECODEUR - QA
 # ----------------------------------------------
@@ -202,6 +198,7 @@ if Choix == 6:
 plt.figure(2)
 plt.title('Image decodée')
 plt.imshow(I_decoded, cmap='gray')
+plt.imsave(f"./ressources/{nom}_decoded.bmp", I_decoded, cmap='gray')
 plt.show()
 # ==========================================================================
 #
@@ -210,13 +207,14 @@ plt.show()
 # ==========================================================================
 # Fin du chronometre
 Time = time.time() - tic
+print(f"PSRN : {computePSNR(I_reduced, I_decoded)}")
 # Si aucune erreur n'a ete detectee
-if Budget > 0:
-    # Calcul du PSNR
-    PSNR = computePSNR(I_reduced, I_decoded)
-    # Calcul du debit
-    Rate = Budget / (len(I_decoded) * len(I_decoded[0]))
-    # Affichage des performances
-    print('********* Resultats *********')
-    print('Temps ecoule: %.2f s\nPSNR: %.2f dB\nRate: %.2f bits/pixel' % (Time, PSNR, Rate))
-    print('*****************************')
+# if Budget > 0:
+#     # Calcul du PSNR
+#     PSNR = computePSNR(I_reduced, I_decoded)
+#     # Calcul du debit
+#     Rate = Budget / (len(I_decoded) * len(I_decoded[0]))
+#     # Affichage des performances
+#     print('********* Resultats *********')
+#     print('Temps ecoule: %.2f s\nPSNR: %.2f dB\nRate: %.2f bits/pixel' % (Time, PSNR, Rate))
+#     print('*****************************')
