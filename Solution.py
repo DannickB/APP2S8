@@ -4,8 +4,7 @@ from convert import convert
 from reduce import reduce
 from QV_encode import QV_encode
 from QV_decode import QV_decode
-from QS_encode import QS_encode
-from QS_decode import QS_decode
+from QS import QS_encode, QS_decode
 from DPCM_encode import DPCM_encode
 from DPCM_decode import DPCM_decode
 from transmit import transmit
@@ -129,6 +128,7 @@ if Choix == 6:
 # Les elements de la cellule N doivent etre entre 0 et 2^N-1.
 # A FAIRE : Remplir le dictionnaire de cellules Data a partir de I_encoded et
 # I_metadata en respectant la convention de la couche physique.
+## TODO : décommenter et implémenter au besoin
 # Data = {}
 # Data[8] = I_encoded
 # Data[1] = I_metadata

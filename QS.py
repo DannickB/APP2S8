@@ -33,3 +33,27 @@ def QS_encode(I_source, ArgumentX):
     print(I_squashed[id_l][id_c].dtype)
     I_metadata = {'mean': mean, 'std_dev': std_dev, 'n_nits': ArgumentX["n_nits"], 'distribution': distribution}
     return I_encoded, I_metadata
+
+def QS_decode(I_encoded, metadata):
+    n_niveaux = 2**metadata["n_nits"]
+    distribution = metadata["distribution"]
+    match distribution:
+        case "uniform":
+            delta = Uniform_distrib[n_niveaux]
+        case "gaussian":
+            delta = Gaussian_distrib[n_niveaux]
+        case "laplacian":
+            delta = Laplacian_distrib[n_niveaux]
+        case _:
+            raise ValueError("Distribution inconnue. Choisissez parmi 'uniform', 'gaussian', ou 'laplacian'.")
+
+    mean  = metadata["mean"]
+    std_dev  = metadata["std_dev"]
+    L, C = I_encoded.shape
+    I_unsquashed = np.zeros((L, C), dtype=np.float32)
+    for id_l in range (0, L):
+        for id_c in range (0, C):
+            decoded = (int(I_encoded[id_l][id_c])-(n_niveaux)//2)*delta
+            I_unsquashed[id_l][id_c] = decoded*std_dev+mean
+
+    return I_unsquashed
