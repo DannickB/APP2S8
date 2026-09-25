@@ -69,7 +69,7 @@ plt.imshow(I_reduced, cmap='gray')
 # CODAGE
 #
 # ==========================================================================
-args = {"n_nits":5, "distribution":"laplacian"}
+args = [4, "laplacian"]
 # ----------------------------------------------
 # CODEUR - QV
 # ----------------------------------------------
@@ -127,16 +127,15 @@ if Choix == 6:
 # Les elements de la cellule N doivent etre entre 0 et 2^N-1.
 # A FAIRE : Remplir le dictionnaire de cellules Data a partir de I_encoded et
 # I_metadata en respectant la convention de la couche physique.
-## TODO : décommenter et implémenter au besoin
-# Data = {}
-# Data[8] = I_encoded
-# Data[1] = I_metadata
+Data = {}
+Data[8] = I_encoded
+Data[1] = I_metadata
 # Appelle de la fonction de transmission
-# Budget = transmit(Data)
+Budget = transmit(Data)
 # Si une erreur a ete detectee par la fonction d'interface
-# if Budget < 0:
-#     # Affichage de l'erreur
-#     print('Erreur : Une donnee depasse la gamme dynamique a la cellule %i.' % -Budget)
+if Budget < 0:
+    # Affichage de l'erreur
+    print('Erreur : Une donnee depasse la gamme dynamique a la cellule %i.' % -Budget)
 
 # %%
 # ==========================================================================
@@ -145,8 +144,8 @@ if Choix == 6:
 #
 # ==========================================================================
 # A FAIRE : Recomposer I_encoded_Rx et I_metadata_Rx a partir de Data.
-# I_encoded_Rx = Data[8]
-# I_metadata_Rx = Data[1]
+I_encoded_Rx = Data[8]
+I_metadata_Rx = Data[1]
 # ==========================================================================
 #
 # DECODAGE
@@ -167,7 +166,7 @@ if Choix == 1:
 # ----------------------------------------------
 if Choix == 2:
     # Appelle la fonction de decodage
-    I_decoded = DPCM_decode(I_encoded, I_metadata)
+    I_decoded = DPCM_decode(I_encoded_Rx, I_metadata_Rx)
 
 # ----------------------------------------------
 # DECODEUR - QS
@@ -209,12 +208,12 @@ plt.show()
 Time = time.time() - tic
 print(f"PSRN : {computePSNR(I_reduced, I_decoded)}")
 # Si aucune erreur n'a ete detectee
-# if Budget > 0:
-#     # Calcul du PSNR
-#     PSNR = computePSNR(I_reduced, I_decoded)
-#     # Calcul du debit
-#     Rate = Budget / (len(I_decoded) * len(I_decoded[0]))
-#     # Affichage des performances
-#     print('********* Resultats *********')
-#     print('Temps ecoule: %.2f s\nPSNR: %.2f dB\nRate: %.2f bits/pixel' % (Time, PSNR, Rate))
-#     print('*****************************')
+if Budget > 0:
+    # Calcul du PSNR
+    PSNR = computePSNR(I_reduced, I_decoded)
+    # Calcul du debit
+    Rate = Budget / (len(I_decoded) * len(I_decoded[0]))
+    # Affichage des performances
+    print('********* Resultats *********')
+    print('Temps ecoule: %.2f s\nPSNR: %.2f dB\nRate: %.2f bits/pixel' % (Time, PSNR, Rate))
+    print('*****************************')

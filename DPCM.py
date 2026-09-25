@@ -7,8 +7,8 @@ Laplacian_distrib = {2: 1.414, 4: 1.0873, 8: 0.7309, 16: 0.4609, 32: 0.2799}
 
 
 def DPCM_encode(I_source, ArgumentX):
-    n_niveaux = 2 ** ArgumentX["n_nits"]
-    distribution = ArgumentX["distribution"]
+    n_niveaux = 2 ** ArgumentX[0]
+    distribution = ArgumentX[1]
     match distribution:
         case "uniform":
             delta = Uniform_distrib[n_niveaux]
@@ -21,7 +21,7 @@ def DPCM_encode(I_source, ArgumentX):
     errors = boucle_initial(I_source)
     e_mean = np.mean(errors)
     e_std_dev = np.std(errors)
-    I_metadata = {'mean': e_mean, 'std_dev': e_std_dev, 'n_nits': ArgumentX["n_nits"], 'distribution': distribution}
+    I_metadata = [ArgumentX[0], e_mean, e_std_dev, delta]
     print(f"delta = {delta}, mean = {e_mean}, std_dev = {e_std_dev}")
     L, C = I_source.shape
     I_decoded = np.zeros((L, C), dtype=np.float32)
@@ -39,20 +39,11 @@ def DPCM_encode(I_source, ArgumentX):
     return I_encoded, I_metadata
 
 def DPCM_decode(I_encoded, metadata):
-    n_niveaux = 2 ** metadata["n_nits"]
-    distribution = metadata["distribution"]
-    match distribution:
-        case "uniform":
-            delta = Uniform_distrib[n_niveaux]
-        case "gaussian":
-            delta = Gaussian_distrib[n_niveaux]
-        case "laplacian":
-            delta = Laplacian_distrib[n_niveaux]
-        case _:
-            raise ValueError("Distribution inconnue. Choisissez parmi 'uniform', 'gaussian', ou 'laplacian'.")
+    n_niveaux = 2 ** metadata[0]
+    delta = metadata[3]
 
-    e_mean = metadata["mean"]
-    e_std_dev = metadata["std_dev"]
+    e_mean = metadata[1]
+    e_std_dev = metadata[2]
     L, C = I_encoded.shape
     I_decoded= np.zeros((L, C), dtype=np.float32)
     for id_l in range(0, L):
@@ -91,4 +82,7 @@ def predict(I, id_l, id_c):
     elif id_c != id_l == 0:
         return I[id_l][id_c-1]
     else:
-        return (I[id_l - 1][id_c] + I[id_l][id_c -1])/2
+        M1 = (I[id_l - 1][id_c] + I[id_l][id_c -1])/2
+        M2 = (I[id_l - 1][id_c] + I[id_l-1][id_c -1])/2
+        M3 = (I[id_l][id_c -1] + I[id_l-1][id_c - 1]) / 2
+        return np.median([M1, M2, M3])
