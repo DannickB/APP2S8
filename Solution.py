@@ -1,9 +1,8 @@
 import time
 
+import VectorialQuantifier
 from convert import convert
 from reduce import reduce
-from QV_encode import QV_encode
-from QV_decode import QV_decode
 from QS import QS_encode, QS_decode
 from DPCM import DPCM_encode, DPCM_decode
 import DctQuantifier as dct
@@ -34,7 +33,7 @@ import matplotlib.pyplot as plt
 # 4 = Technique de quantification par transformee en cosinus discrete (DCT)
 # 5 = Technique de quantification par troncature de blocs (BTC)
 # 6 = Technique de quantification adaptative (QA)
-Choix = 2
+Choix = 1
 # Charge l'image source
 # A FAIRE : remplacer par votre propre chargement d'image (pas de librairie utilisee ici)
 nom = 'lenna'
@@ -74,11 +73,10 @@ args = [4, "laplacian"]
 # CODEUR - QV
 # ----------------------------------------------
 if Choix == 1:
-    # Parametres d'entree
-    # A FAIRE : Remplacer ArgumentX par votre/vos parametre(s) d'entree
-    ArgumentX = 0
-    # Appelle la fonction de codage
-    I_encoded, I_metadata = QV_encode(I_reduced, ArgumentX)
+    vector_size = 2
+    n_bits_per_vector = 8
+    I_encoded, representatives = VectorialQuantifier.encode(I_reduced, vector_size, n_bits_per_vector)
+    I_metadata = representatives
 
 # ----------------------------------------------
 # CODEUR - DPCM
@@ -155,11 +153,9 @@ I_metadata_Rx = Data[1]
 # DECODEUR - QV
 # ----------------------------------------------
 if Choix == 1:
-    # Parametres d'entree
-    # A FAIRE : Remplacer ArgumentY par votre/vos parametre(s) d'entree
-    ArgumentY = 0
-    # Appelle la fonction de decodage
-    I_decoded = QV_decode(I_encoded_Rx, I_metadata_Rx, ArgumentY)
+    I_decoded = VectorialQuantifier.decode(I_encoded, vector_size, representatives, I_reduced.shape[0], I_reduced.shape[1])
+    nbits_per_pixel = VectorialQuantifier.find_bits_per_pixel(I_encoded, vector_size, n_bits_per_vector, I_reduced.shape[0] * I_reduced.shape[1])
+    print("Methode vectoriel nbits/pixel: ",  nbits_per_pixel)
 
 # ----------------------------------------------
 # DECODEUR - DPCM
@@ -180,6 +176,9 @@ if Choix == 3:
 if Choix == 4:
     l, c = I_reduced.shape
     I_decoded = dct.decode(I_encoded,l, c, a, b)
+    bpp, info = dct.calculate_bit_pixel(I_encoded, I_reduced.shape[0] * I_reduced.shape[1])
+    print("Methode DCT bits/pixel: ", bpp)
+    print("Methode DCT info: ", info)
 
 # ----------------------------------------------
 # DECODEUR - BTC
@@ -198,7 +197,6 @@ plt.figure(2)
 plt.title('Image decodée')
 plt.imshow(I_decoded, cmap='gray')
 plt.imsave(f"./ressources/{nom}_decoded.bmp", I_decoded, cmap='gray')
-plt.show()
 # ==========================================================================
 #
 # CALCUL DE LA PERFORMANCE
@@ -207,6 +205,8 @@ plt.show()
 # Fin du chronometre
 Time = time.time() - tic
 print(f"PSRN : {computePSNR(I_reduced, I_decoded)}")
+print(f"Time : {Time}s")
+plt.show()
 # Si aucune erreur n'a ete detectee
 if Budget > 0:
     # Calcul du PSNR

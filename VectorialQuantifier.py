@@ -1,96 +1,143 @@
+import random
+from collections import Counter
+
 import numpy as np
 
-class VectorialQuantifier:
-    def __init__(self):
-        ...
+def _initialize_representatives_random(space, n_representative):
+    _representatives = random.choices(space, k=n_representative)
+    representatives = {}
+    for i in range(n_representative):
+        representatives[i] = _representatives[i]
+    return representatives
 
-    def _initialize_representatives(self, space, n_representative, distance_threshold):
-        found = 0
-        representatives = {}
-        while found < n_representative:
-            if found == 0 :
-                representatives[0] = space[0]
-                found += 1
-                continue
+def _initialize_representatives_distance(space, n_representative, distance_threshold=0,
+                                          decay=10, min_threshold=0.0):
+    space = np.asarray(space, dtype=float)
+    n_points = space.shape[0]
+    if n_representative > n_points:
+        raise ValueError("Cannot select more representatives than points available")
 
-            for vector in space:
+    remaining_idx = list(range(n_points))
 
-                if found >= n_representative:
-                    break
+    representatives = {}
+    found = 0
 
-                distances = [np.linalg.norm(vector - representatives[i]) for i in range(len(representatives))]
-                if min(distances) > distance_threshold:
-                    representatives[found] = vector
-                    found += 1
+    first_idx = random.choice(remaining_idx)
+    representatives[found] = space[first_idx]
+    remaining_idx.remove(first_idx)
+    found += 1
 
-            distance_threshold -= 5
+    while len(representatives) < n_representative:
+        reps_array = np.array(list(representatives.values()))
+        candidates = space[remaining_idx]
 
-        return representatives
+        dists = np.linalg.norm(candidates[:, None, :] - reps_array[None, :, :], axis=2)
+        min_dist_to_reps = dists.min(axis=1)
 
-    def _calculate_cluster(self, space,representatives):
-        clusters = {}
+        acceptance = np.argmax(min_dist_to_reps)
+        best_distance = min_dist_to_reps[acceptance]
 
+        if best_distance >= distance_threshold:
+            chosen_idx = remaining_idx[acceptance]
+            representatives[found] = space[chosen_idx]
+            remaining_idx.remove(chosen_idx)
+            found += 1
+        else:
+            distance_threshold = max(distance_threshold - decay, min_threshold)
+
+    return representatives
+
+def _calculate_cluster(space,representatives):
+    clusters = {}
+
+    for i in range(len(representatives)):
+        clusters[i] = []
+
+    space_array = np.array(space)
+    reps_array = np.array(list(representatives.values()))
+
+    sq_space = np.sum(space_array ** 2, axis=1)[:, None]
+    sq_reps = np.sum(reps_array ** 2, axis=1)[None, :]
+    cross = space_array @ reps_array.T
+    dist_sq = sq_space + sq_reps - 2 * cross
+    labels = np.argmin(dist_sq, axis=1)
+    for i in range(len(labels)):
+        clusters[labels[i]].append(space[i])
+    return clusters
+
+def _find_representative(space, n_representative, number_of_iterations):
+    representatives = _initialize_representatives_distance(space, n_representative, 1000)
+
+    for i in range(number_of_iterations):
+        clusters = _calculate_cluster(space, representatives)
+
+        # Recalculate representatives
         for i in range(len(representatives)):
-            clusters[i] = []
+            representatives[i] = np.average(clusters[i], axis=0)
 
-        for data in space:
+    return representatives
 
-            euc_dist = []
-            for j in range(len(representatives)):
-                euc_dist.append(np.linalg.norm(data - representatives[j]))
+def encode(Is, vector_size, n_bits):
+    # Divide Is into space (X number of vector[n_features])
+    Ir = Is.copy()
+    n_representative = 2**n_bits
+    space = []
+    vector_side_row = np.round(vector_size**0.5).astype(int)
+    vector_side_col = vector_size // vector_side_row
 
-            clusters[euc_dist.index(min(euc_dist))].append(data)
-        return clusters
+    if Ir.shape[0] % vector_side_row:
+        pad = vector_side_row - Ir.shape[0] % vector_side_row
+        Ir = np.vstack((Ir, np.tile(Ir[[-1], :], (pad, 1))))
+    if Ir.shape[1] % vector_side_col:
+        pad = vector_side_col - Ir.shape[1] % vector_side_col
+        Ir = np.hstack((Ir, np.tile(Ir[:, [-1]], (1, pad))))
 
-    def _find_representative(self, space, n_representative, number_of_iterations):
-        representatives = self._initialize_representatives(space, n_representative, 1000)
+    for i in range(Ir.shape[0] // vector_side_row):
+        for j in range(Ir.shape[1] // vector_side_col):
+            vector = Ir[i * vector_side_row : i * vector_side_row + vector_side_row,
+                        j * vector_side_col : j * vector_side_col + vector_side_col]
 
-        for i in range(number_of_iterations):
-            clusters = self._calculate_cluster(space, representatives)
+            space.append(vector.flatten())
 
-            # Recalculate representatives
-            for i in range(len(representatives)):
-                representatives[i] = np.average(clusters[i], axis=0)
+    # Find representative
+    representatives = _find_representative(space, n_representative, 10)
 
-        return representatives
+    # encode
+    Ie = np.zeros((Is.shape[0] // vector_side_row + 1, Is.shape[1] // vector_side_col + 1))
+    for i in range(Ir.shape[0] // vector_side_row):
+        for j in range(Ir.shape[1] // vector_side_col):
+            vector = Ir[i * vector_side_row: i * vector_side_row + vector_side_row,
+                        j * vector_side_col: j * vector_side_col + vector_side_col].flatten()
 
-    def encode(self, Is, vector_size, n_bits, ):
-        # Divide Is into space (X number of vector[n_features])
-        n_representative = n_bits**2
-        space = []
-        vector_side = np.round(vector_size**0.5).astype(int)
-        for i in range(Is.shape[0] // vector_side):
-            for j in range(Is.shape[1] // vector_side):
-                vector = Is[i * vector_side : i * vector_side + vector_side,
-                            j * vector_side : j * vector_side + vector_side]
+            distances = [np.linalg.norm(vector - representatives[i]) for i in range(len(representatives))]
+            label = distances.index(min(distances))
 
-                space.append(vector.flatten())
+            Ie[i][j] = label
 
-        # Find representative
-        representatives = self._find_representative(space, n_representative, 10)
+    counter = Counter()
+    for x in range(Ie.shape[0]):
+        counter += Counter(Ie[x])
+    print("nbits", np.log2(len(counter)))
+    print(counter)
+    return Ie, representatives
 
-        # encode
-        Ir = np.zeros((Is.shape[0] // vector_side, Is.shape[1] // vector_side))
-        for i in range(Is.shape[0] // vector_side):
-            for j in range(Is.shape[1] // vector_side):
-                vector = Is[i * vector_side: i * vector_side + vector_side,
-                            j * vector_side: j * vector_side + vector_side].flatten()
+def decode(Is, vector_size, representatives, row, col):
+    vector_side_row = np.round(vector_size**0.5).astype(int)
+    vector_side_col = vector_size // vector_side_row
+    Ir = np.zeros((Is.shape[0] * vector_side_row, Is.shape[1] * vector_side_col))
 
-                distances = [np.linalg.norm(vector - representatives[i]) for i in range(len(representatives))]
-                label = distances.index(min(distances))
+    for i in range(Ir.shape[0] // vector_side_row):
+        for j in range(Ir.shape[1] // vector_side_col):
+            vector = representatives[Is[i, j]].reshape(vector_side_row, vector_side_col)
+            Ir[i * vector_side_row : i * vector_side_row + vector_side_row,
+               j * vector_side_col : j * vector_side_col + vector_side_col] = vector
 
-                Ir[i][j] = label
+    return Ir[:row, :col]
 
-        return Ir, representatives
+def find_bits_per_pixel(Is, vector_size, n_bit_vector, n_pixels):
+    n_representative = 2**n_bit_vector
 
-    def decode(self, Is, vector_size, representatives):
-        vector_side = np.round(vector_size**0.5).astype(int)
-        Ir = np.zeros((Is.shape[0] * vector_side, Is.shape[1] * vector_side))
+    n_bits_metadata = vector_size * 8 * n_representative
+    n_bits_image = Is.shape[0] * Is.shape[1] * n_bit_vector
 
-        for i in range(Ir.shape[0] // vector_side):
-            for j in range(Ir.shape[1] // vector_side):
-                vector = representatives[Is[i, j]].reshape(vector_side, vector_side)
-                Ir[i * vector_side : i * vector_side + vector_side,
-                   j * vector_side : j * vector_side + vector_side] = vector
-
-        return Ir
+    return (n_bits_metadata + n_bits_image) / n_pixels
