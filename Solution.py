@@ -1,3 +1,4 @@
+import sys
 import time
 
 import VectorialQuantifier
@@ -33,7 +34,7 @@ import matplotlib.pyplot as plt
 # 4 = Technique de quantification par transformee en cosinus discrete (DCT)
 # 5 = Technique de quantification par troncature de blocs (BTC)
 # 6 = Technique de quantification adaptative (QA)
-Choix = 1
+Choix = 4
 # Charge l'image source
 # A FAIRE : remplacer par votre propre chargement d'image (pas de librairie utilisee ici)
 nom = 'lenna'
@@ -99,6 +100,7 @@ if Choix == 3:
 # ----------------------------------------------
 if Choix == 4:
     I_encoded, a, b = dct.encode(I_reduced)
+    I_metadata = (a, b)
 
 # ----------------------------------------------
 # CODEUR - BTC
@@ -176,9 +178,10 @@ if Choix == 3:
 if Choix == 4:
     l, c = I_reduced.shape
     I_decoded = dct.decode(I_encoded,l, c, a, b)
-    bpp, info = dct.calculate_bit_pixel(I_encoded, I_reduced.shape[0] * I_reduced.shape[1])
-    print("Methode DCT bits/pixel: ", bpp)
-    print("Methode DCT info: ", info)
+    bits = dct.encode_to_huffman(I_encoded)
+    print("Methode DCT bits/pixel: ", (len(bits) + (sys.getsizeof(l) * 8) +
+                                       (sys.getsizeof(c) * 8) + (sys.getsizeof(a) * 8)+
+                                       (sys.getsizeof(b) * 8)) / (I_reduced.shape[0] * I_reduced.shape[1]))
 
 # ----------------------------------------------
 # DECODEUR - BTC

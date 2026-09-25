@@ -1,5 +1,9 @@
+from collections import Counter
+
 import numpy as np
 from scipy.fft import dctn, idctn
+
+import HuffmanTable
 
 quantization_table = np.array([[16, 11, 10, 16, 24, 40, 51, 61],
                                [12, 12, 14, 19, 26, 58, 60, 55],
@@ -18,6 +22,9 @@ def flatten_diagonally(matrix):
             diagonal = i + j
             matrix_diagonal[diagonal].append(matrix[i][j])
 
+    for i in range(0, len(matrix_diagonal), 2):
+        matrix_diagonal[i].reverse()
+
     matrix_flatten = []
     [matrix_flatten.extend(x) for x in matrix_diagonal]
 
@@ -33,6 +40,9 @@ def reconstitute(matrix_flatten, bloc_size=8):
     for i in range(len(matrix_diagonal)):
         matrix_diagonal[i].extend(
             [matrix_flatten_copy.pop(0) for _ in range(element_per_diagonal[i])])
+
+    for i in range(0, len(matrix_diagonal), 2):
+        matrix_diagonal[i].reverse()
 
     matrix = np.zeros((bloc_size, bloc_size))
     for i in range(bloc_size):
@@ -59,6 +69,49 @@ def add_trailing_zeros(matrix_flatten, bloc_size=8):
     zeros = np.zeros(bloc_size ** 2 - len(matrix_flatten_copy))
     return np.concatenate((matrix_flatten_copy, zeros))
 
+def to_huffman_encoding_AC(nZeros, value):
+    category = 0 if value == 0 else abs(int(value)).bit_length()
+    code = HuffmanTable.huffman_codes[f"{nZeros},{category}"]
+    if category == 0:
+        value_bits = ""
+    elif value > 0:
+        value_bits = format(value, f"0{category}b")
+    else:
+        value_bits = format(2**category - 1 + value, f"0{category}b")
+    return code + value_bits
+
+def to_huffman_encoding_DC(value):
+    category = 0 if value == 0 else abs(int(value)).bit_length()
+    code = HuffmanTable.huffman_code_DC[f"{category}"]
+    value_bits = ""
+    if category == 0:
+        value_bits = ""
+    elif value > 0:
+        value_bits = format(value, f"0{category}b")
+    else:
+        value_bits = format(2 ** category - 1 + value, f"0{category}b")
+    return code + value_bits
+
+def encode_to_huffman(Is):
+    data = []
+    for row in Is:
+        dc = row[0]
+        values = []
+        nZeros = 0
+        for i in range(1, len(row)):
+            if row[i] == 0:
+                nZeros += 1
+                if nZeros == 16:
+                    values.append((15, 0))
+                    nZeros = 0
+            else:
+                values.append((nZeros, row[i]))
+                nZeros = 0
+        dc_code = to_huffman_encoding_DC(dc)
+        ac_code = "".join(to_huffman_encoding_AC(r, v) for r, v in values)
+        EOB_code = to_huffman_encoding_AC(0, 0)
+        data.extend(dc_code + ac_code + EOB_code)
+    return data
 
 def encode(Is, bloc_size=8):
     Ir = Is.copy()
@@ -112,3 +165,10 @@ def decode(blocks, row, col,
             j * bloc_size:(j + 1) * bloc_size] = block
 
     return I_before_trunk[:row, :col] + 2 ** (8 - 1) + 1
+
+if __name__ == "__main__":
+    matrix = np.array([[1, 2, 3], [4, 5, 6], [7, 8, 9]])
+    print(matrix)
+    flatten_matrix = flatten_diagonally(matrix)
+    print(flatten_matrix)
+    print(reconstitute(flatten_matrix, 3))
