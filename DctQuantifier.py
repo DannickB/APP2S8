@@ -113,7 +113,7 @@ def encode_to_huffman(Is):
         data.extend(dc_code + ac_code + EOB_code)
     return data
 
-def encode(Is, bloc_size=8):
+def encode(Is, factor_K = 1, bloc_size=8):
     Ir = Is.copy()
 
     # dividable by bloc_size
@@ -135,7 +135,7 @@ def encode(Is, bloc_size=8):
             dct_result = dctn(block)
 
             quantization_result = np.floor(
-                dct_result / quantization_table + 0.5).astype(int)
+                dct_result / (factor_K * quantization_table) + 0.5).astype(int)
 
             flatten_matrix = flatten_diagonally(quantization_result)
 
@@ -147,7 +147,7 @@ def encode(Is, bloc_size=8):
 
 
 def decode(blocks, row, col,
-           row_b, col_b, bloc_size=8):
+           row_b, col_b, factor_K = 1, bloc_size=8):
     blocks_copy = blocks.copy()
     I_before_trunk = np.zeros((row_b * bloc_size, col_b * bloc_size))
     for i in range(row_b):
@@ -157,7 +157,7 @@ def decode(blocks, row, col,
             flatten_matrix = add_trailing_zeros(encoded_bloc, bloc_size)
             quantization_result = reconstitute(flatten_matrix, bloc_size)
 
-            dct_result = quantization_result * quantization_table
+            dct_result = quantization_result * (factor_K * quantization_table)
 
             block = idctn(dct_result)
 

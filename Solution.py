@@ -99,7 +99,8 @@ if Choix == 3:
 # CODEUR - DCT
 # ----------------------------------------------
 if Choix == 4:
-    I_encoded, a, b = dct.encode(I_reduced)
+    facteur_K = 1.5
+    I_encoded, a, b = dct.encode(I_reduced, facteur_K)
     I_metadata = (a, b)
 
 # ----------------------------------------------
@@ -177,11 +178,12 @@ if Choix == 3:
 # ----------------------------------------------
 if Choix == 4:
     l, c = I_reduced.shape
-    I_decoded = dct.decode(I_encoded,l, c, a, b)
+    I_decoded = dct.decode(I_encoded,l, c, a, b, facteur_K)
     bits = dct.encode_to_huffman(I_encoded)
-    print("Methode DCT bits/pixel: ", (len(bits) + (sys.getsizeof(l) * 8) +
-                                       (sys.getsizeof(c) * 8) + (sys.getsizeof(a) * 8)+
-                                       (sys.getsizeof(b) * 8)) / (I_reduced.shape[0] * I_reduced.shape[1]))
+    # L == C toujours alors peut être exclue des calculs car est dupliqué. Même chose pour A == B
+    print("Taille des métadonnées : ",  sys.getsizeof(l) + sys.getsizeof(a) + sys.getsizeof(facteur_K))
+    print("Methode DCT bits/pixel: ", (len(bits) + 8*(sys.getsizeof(l) + sys.getsizeof(a) + sys.getsizeof(facteur_K)))
+                                            / (I_reduced.shape[0] * I_reduced.shape[1]))
 
 # ----------------------------------------------
 # DECODEUR - BTC
