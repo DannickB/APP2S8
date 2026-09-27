@@ -5,7 +5,8 @@ import VectorialQuantifier
 from convert import convert
 from reduce import reduce
 from QS import QS_encode, QS_decode
-from DPCM import DPCM_encode, DPCM_decode
+from DPCM_encode import DPCM_encode
+from DPCM_decode import DPCM_decode
 import DctQuantifier as dct
 from transmit import transmit
 from computePSNR import computePSNR
@@ -72,7 +73,6 @@ plt.imshow(I_reduced, cmap='gray')
 # CODAGE
 #
 # ==========================================================================
-args = [4, "laplacian"]
 # ----------------------------------------------
 # CODEUR - QV
 # ----------------------------------------------
@@ -87,7 +87,7 @@ if Choix == 1:
 # ----------------------------------------------
 if Choix == 2:
     # Appelle la fonction de codage
-    I_encoded, e_mean, e_std_dev = DPCM_encode(I_reduced, args)
+    I_encoded, e_mean, e_std_dev = DPCM_encode(I_reduced)
     I_metadata = (e_mean, e_std_dev)
     print(np.unique(I_encoded))
     I_encoded = I_encoded.tolist()
@@ -154,7 +154,7 @@ if Budget < 0:
 # ==========================================================================
 # A FAIRE : Recomposer I_encoded_Rx et I_metadata_Rx a partir de Data.
 I_encoded_Rx = Data[4]
-I_metadata_Rx = Data[5]
+I_metadata_Rx = Data[6]
 # ==========================================================================
 #
 # DECODAGE
@@ -174,7 +174,7 @@ if Choix == 1:
 if Choix == 2:
     # Appelle la fonction de decodage
     I_encoded_Rx = np.array(I_encoded_Rx)
-    I_decoded = DPCM_decode(I_encoded_Rx, *I_metadata_Rx, args)
+    I_decoded = DPCM_decode(I_encoded_Rx, *I_metadata_Rx)
     taille_metadata = sys.getsizeof(I_metadata_Rx)
     Rate = Budget / (len(I_decoded) * len(I_decoded[0])) + taille_metadata/(LIGNES*COLONNES)
     print("Taille des métadonnées : ",  taille_metadata)
