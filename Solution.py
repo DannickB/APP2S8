@@ -34,11 +34,11 @@ import matplotlib.pyplot as plt
 # 4 = Technique de quantification par transformee en cosinus discrete (DCT)
 # 5 = Technique de quantification par troncature de blocs (BTC)
 # 6 = Technique de quantification adaptative (QA)
-Choix = 4
+Choix = 2
 # Charge l'image source
 # A FAIRE : remplacer par votre propre chargement d'image (pas de librairie utilisee ici)
-nom = 'lenna'
-I_source = Image.open(f"./ressources/{nom}.bmp")
+nom = 'cman'
+I_source = Image.open(f"./ressources/{nom}.tif")
 
 # Affiche l'image source
 # A FAIRE : remplacer par votre propre affichage d'image
@@ -49,7 +49,10 @@ tic = time.time()
 # CONVERSION DE FORMAT DE CODAGE DES COULEURS
 #
 # ==========================================================================
-I_source = convert(I_source)
+try:
+    I_source = convert(I_source)
+except:
+    I_source = np.array(I_source)
 # ==========================================================================
 #
 # REDUCTION DE DIMENSIONS
@@ -84,8 +87,10 @@ if Choix == 1:
 # ----------------------------------------------
 if Choix == 2:
     # Appelle la fonction de codage
-    I_encoded, I_metadata = DPCM_encode(I_reduced, args)
+    I_encoded, e_mean, e_std_dev = DPCM_encode(I_reduced, args)
+    I_metadata = (e_mean, e_std_dev)
     print(np.unique(I_encoded))
+    I_encoded = I_encoded.tolist()
 
 # ----------------------------------------------
 # CODEUR - QS
@@ -129,10 +134,13 @@ if Choix == 6:
 # A FAIRE : Remplir le dictionnaire de cellules Data a partir de I_encoded et
 # I_metadata en respectant la convention de la couche physique.
 Data = {}
-Data[8] = I_encoded
-Data[1] = I_metadata
+Data[4] = I_encoded
+Data[6] = I_metadata
 # Appelle de la fonction de transmission
-Budget = transmit(Data)
+if Choix == 2:
+    Budget = transmit(Data)
+else:
+    Budget = -1
 # Si une erreur a ete detectee par la fonction d'interface
 if Budget < 0:
     # Affichage de l'erreur
@@ -145,8 +153,8 @@ if Budget < 0:
 #
 # ==========================================================================
 # A FAIRE : Recomposer I_encoded_Rx et I_metadata_Rx a partir de Data.
-I_encoded_Rx = Data[8]
-I_metadata_Rx = Data[1]
+I_encoded_Rx = Data[4]
+I_metadata_Rx = Data[5]
 # ==========================================================================
 #
 # DECODAGE
@@ -165,7 +173,12 @@ if Choix == 1:
 # ----------------------------------------------
 if Choix == 2:
     # Appelle la fonction de decodage
-    I_decoded = DPCM_decode(I_encoded_Rx, I_metadata_Rx)
+    I_encoded_Rx = np.array(I_encoded_Rx)
+    I_decoded = DPCM_decode(I_encoded_Rx, *I_metadata_Rx, args)
+    taille_metadata = sys.getsizeof(I_metadata_Rx)
+    Rate = Budget / (len(I_decoded) * len(I_decoded[0])) + taille_metadata/(LIGNES*COLONNES)
+    print("Taille des métadonnées : ",  taille_metadata)
+    print("Methode DPCM bits/pixel: ", Rate)
 
 # ----------------------------------------------
 # DECODEUR - QS
@@ -212,13 +225,4 @@ Time = time.time() - tic
 print(f"PSRN : {computePSNR(I_reduced, I_decoded)}")
 print(f"Time : {Time}s")
 plt.show()
-# Si aucune erreur n'a ete detectee
-if Budget > 0:
-    # Calcul du PSNR
-    PSNR = computePSNR(I_reduced, I_decoded)
-    # Calcul du debit
-    Rate = Budget / (len(I_decoded) * len(I_decoded[0]))
-    # Affichage des performances
-    print('********* Resultats *********')
-    print('Temps ecoule: %.2f s\nPSNR: %.2f dB\nRate: %.2f bits/pixel' % (Time, PSNR, Rate))
-    print('*****************************')
+
