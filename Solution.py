@@ -33,7 +33,7 @@ import matplotlib.pyplot as plt
 # 2 = Technique de quantification differentielle (DPCM)
 # 3 = Technique de quantification scalaire (QS)
 # 4 = Technique de quantification par transformee en cosinus discrete (DCT)
-Choix = 4
+Choix = 1
 # Charge l'image source
 # A FAIRE : remplacer par votre propre chargement d'image (pas de librairie utilisee ici)
 nom = 'AUTRE21'
@@ -66,8 +66,8 @@ plt.imshow(I_reduced, cmap='gray')
 # CODEUR - QV
 # ----------------------------------------------
 if Choix == 1:
-    vector_size = 2
-    n_bits_per_vector = 8
+    vector_size = 3
+    n_bits_per_vector = 9
     I_encoded, representatives = VectorialQuantifier.encode(I_reduced, vector_size, n_bits_per_vector)
     I_metadata = representatives
 
